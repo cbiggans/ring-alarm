@@ -35,7 +35,7 @@ Usage
         });
 
         // register for DataUpdate messages
-        ring.setAlarmCallback(station, 'DataUpdate' (err, station, message) => {
+        ring.setAlarmCallback(station, 'DataUpdate', (err, station, message) => {
           if (err) ...;
 
           ...
