@@ -176,14 +176,14 @@ class Doorbot {
                     logger('code', json.statusCode);
                     logger('headers', json.headers);
                 }
-                logger(e);
+                logger('error', e);
                 if (e && e.code === 401 && this.counter < this.retries) {
                     logger('auth failed, retrying', e);
                     this.counter += 1;
                     var self = this;
                     setTimeout(() => {
                         logger('auth failed, retry', { counter: self.counter });
-                        self.token = null;
+                        self.token = self.oauthToken = null;
                         self._authenticate(true, (e) => {
                             /*istanbul ignore next*/
                             if (e) {
@@ -240,7 +240,6 @@ class Doorbot {
             res.on('end', () => {
                 let e = null;
                 let json = null;
-                let oauthToken = null;
                 try {
                     json = JSON.parse(data);
                 } catch (je) {
@@ -249,6 +248,7 @@ class Doorbot {
                     e = new Error('JSON parse error from ring, check logging..');
                 }
                 let token = null;
+                let oauthToken = null;
                 if (json && json.access_token) {
                     token = json.access_token;
                     oauthToken = token;
@@ -256,7 +256,7 @@ class Doorbot {
                 }
                 if (!token || e) {
                     logger('access_token request failed, bailing..');
-                    e = e || new Error('Api failed to return an authentication_token');
+                    e = e || new Error('API failed to return an authentication_token');
                     return callback(e);
                 }
                 const body = JSON.stringify({
@@ -270,7 +270,7 @@ class Doorbot {
                 });
                 logger('session json', body);
                 const sessionURL = `https://api.ring.com/clients_api/session?api_version=${this.api_version}`;
-                logger('sessionURL', sessionURL);
+                logger2('sessionURL', sessionURL);
                 const u = parse(sessionURL, true);
                 u.method = 'POST';
                 u.headers = {
@@ -306,8 +306,8 @@ class Doorbot {
                         var self = this;
                         setTimeout(() => {
                             self.token = token;
+                            self.oauthToken = oauthToken;
                             self.authenticating = false;
-                            this.oauthToken = oauthToken;
                             if (self.authQueue.length) {
                                 logger(`Clearing ${self.authQueue.length} callbacks from the queue`);
                                 self.authQueue.forEach(_cb => {return _cb(e, token);});
@@ -350,6 +350,7 @@ class Doorbot {
                 const callbacks = self.alarmCallbacks[key];
 
                 logger2(key + ': ' + err.toString());
+                self.token = self.oauthToken = null;
 
                 delete self.alarmSockets[key];
                 delete self.alarmCallbacks[key];
